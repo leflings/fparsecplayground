@@ -21,19 +21,18 @@ and MethodDecl = {
 and Stmt
     = Block of Stmt list
     | Decl of Variable
+    | Assign of Expr * Expr
+    | Return of Expr option
     | If of Expr * Stmt
     | IfElse of Expr * Stmt * Stmt
     | While of Expr * Stmt
-    | Assign of Identifier * Expr
     // Alternatively, make assign a DU with reguler and decl
     //| DeclAssign of Variable * Expr
     | MethodCall of Expr * Expr list
-    | Return of Expr option
 and Expr
     = BinaryOp of Expr * string * Expr
     | UnaryOp of string * Expr
     | MethodCall of Expr * Expr list
-    | Parens of Expr
     | Identfier of Identifier
     | New of New
     | Value of Value
@@ -43,7 +42,6 @@ and New
 and Identifier
     = Ident of string
     | Selector of Identifier * Identifier
-//    | Array of Expr * Expr
     | Array of Expr * Expr
 and MType
     = Int

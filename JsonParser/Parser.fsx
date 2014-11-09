@@ -95,25 +95,22 @@ let mvariable : Parser<Variable, unit> = (mType .>> ws1) .>>. ident
 
 run mvariable "a[] a"
 
-let vardecl = mvariable .>>? sc |>> Stmt.Decl
+//let vardecl = mvariable .>>? sc |>> Stmt.Decl
 
-run ((vardecl .>> ws) .>>. mvariable) "int[] a; int a"
-run ((mvariable) .>>. (ws >>. vardecl)) "int ai i p;"
-
-let expr, exprRef = createParserForwardedToRef<Expr, unit>()
-
-
+//run ((vardecl .>> ws) .>>. mvariable) "int[] a; int a"
+//run ((mvariable) .>>. (ws >>. vardecl)) "int ai i p;"
 
 
 // Expressions
+let expr, exprRef = createParserForwardedToRef<Expr, unit>()
 
 let opp = OperatorPrecedenceParser<Expr,unit,unit>()
-let inops = ["+";"-";"*";"&&";"==";"."]
-let preOps = ["-";"!"]
+let infixOps = ["+";"-";"*";"&&";"==";".";"<";">"]
+let prefixOps = ["-";"!"]
 
-for op in inops do
+for op in infixOps do
     opp.AddOperator(InfixOperator(op,ws,1,Associativity.Left, fun x y -> Expr.BinaryOp(x, op, y)))
-for op in preOps do
+for op in prefixOps do
     opp.AddOperator(PrefixOperator(op, ws, 1, true, fun x -> Expr.UnaryOp(op, x)))
 
 // New object or array
@@ -180,67 +177,46 @@ run expr "a[2](1)"
 run expr "a[2][2]"
 run expr "(new int[2])[1]()"
 
+let exprInParen = between (str_ws "(") (str_ws ")") expr
+
+
+// ====================
+// STATEMENTS
+// ====================
+
 let stmt, stmtRef = createParserForwardedToRef<Stmt, unit>()
 
-//let block : Parser<Block, unit> = // str "{" >>. ws >>. many stmt .>> ws .>> str "}"
-//    between (str "{") (str "}") (ws >>. many stmt .>> ws)
+let stmtBlock =
+    let singleStmt = stmt |>> fun a -> [a]
+    (singleStmt <|> between (str_ws "{") (str_ws "}") (many stmt))
+        |>> Stmt.Block
 
-let sBlock = (str "{") >>. (many stmt) .>> (str "}") |>> Stmt.Block
-let sVardecl = vardecl
-let sIf =
-    pipe2
-        (between (str "if(" >>. ws) (ws .>> str ")") expr)
-        stmt
-        (fun x y -> Stmt.If(x, y))
-let sIfElse =
-    pipe2
-        sIf 
-        (str "else" >>. stmt)
-        (fun x y -> match x with | If(e,s) -> Stmt.IfElse(e,s,y) | _ -> failwith "impossible")
-let sWhile =
-    pipe2
-        (str "while(" >>. ws >>. expr .>> ws .>> str ")")
-        stmt
-        (fun x y -> Stmt.While(x,y))
-let sAssign =
-    pipe2
-        (mIdentifier .>> ws .>> str "=")
-        (ws >>. expr .>> ws .>> sc)
-        (fun x y -> Stmt.Assign(x, y))
-//    pipe2
-//        expr
-//        (ws >>. str "=" >>. ws >>. expr .>> ws .>> sc)
-//        (fun x y -> Stmt.Assign(x, y))
-let sMethodCall =
-    exprMethodCall .>> ws .>> sc
-        |>>
-        function
-        | MethodCall(e, es) -> Stmt.MethodCall(e, es)
-        | _ -> failwith "nuh uh"
-let sReturn =
-    str "return" >>. opt expr .>> sc |>> Stmt.Return
+let stmtVardecl = mvariable .>> str_ws ";" |>> Stmt.Decl
+let stmtAssign = (expr .>> str_ws "=") .>>. expr .>> str_ws ";" |>> Stmt.Assign
+let stmtReturn = str_ws "return" >>. opt expr .>> str_ws ";" |>> Stmt.Return
+let stmtIf = (str_ws "if" >>. exprInParen) .>>.  (stmtBlock) |>> Stmt.If
+let stmtIfElse =
+    tuple3 (str_ws "if" >>. exprInParen) (stmtBlock) (str_ws "else" >>. stmtBlock)
+    |>> Stmt.IfElse
+let stmtWhile = (str_ws "while" >>. exprInParen) .>>. stmtBlock |>> Stmt.While
+let stmtMethodCall =
+    expr .>> str_ws ";" >>= function
+                            | MethodCall(e,es) -> preturn (Stmt.MethodCall(e,es))
+                            | _ -> fail "not method call"
 
 do stmtRef :=
-    ws >>. (
-        [
-            sBlock
-            sVardecl
-            sIf
-            sIfElse
-            sWhile
-            sAssign
-            sMethodCall
-            sReturn
-        ]
-        |> List.map attempt
-        |> choice
-        ) .>> ws
+    attempt stmtReturn <|>
+    attempt stmtVardecl <|>
+    attempt stmtAssign <|> 
+    attempt stmtMethodCall <|>
+    attempt stmtIfElse <|> attempt stmtIf <|>
+    attempt stmtWhile
 
 run expr "3"
 
 run stmt "int a;"
 run stmt "a = 3;"
-run stmt "{ }"
+run (many stmt) "int a; if(a < 3) { a = 3; } else if ( a == 4) { a = 5; } else { a = 6; }"
 
 let methodDecl =
     pipe2
