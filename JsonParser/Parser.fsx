@@ -130,22 +130,35 @@ let exprNew =
 let exprValue = mvalue |>> Expr.Value
 let exprIdentifier =
     ident |>> (Ident >> Expr.Identfier)
-//    pipe2 ident (many (betweenStrings "[" "]" expr))
-//        (fun x y -> List.fold (fun (acc) e -> Expr.Identfier(Identifier.Array(acc, e)) ) (Expr.Identfier(Ident(x))) y)
 let exprMethodCall =
     pipe2
         (exprIdentifier .>> ws)
         (many1(between (str_ws "(") (str_ws ")") (sepBy expr (str_ws ","))))
         (List.fold (fun acc e -> Expr.MethodCall(acc, e)))
 
+type IdentTrail = Index of Expr | Invocation of Expr list
+
 let pvalue =
-    (exprValue <|> attempt exprMethodCall <|> attempt exprNew <|> attempt exprIdentifier)
-//    .>>. opt (betweenStrings "[" "]" expr)
-    .>>. opt (many1 (betweenStrings "[" "]" expr))
-    |>> (fun (e, a) -> match a with
-//                       | Some arr -> Expr.Identfier(Identifier.Array(e, arr))
-                       | Some arr -> List.fold (fun acc el -> Expr.Identfier(Identifier.Array(acc, el))) e arr
-                       | None -> e )
+    let indexing = betweenStrings "[" "]" expr |>> IdentTrail.Index
+    let invoking = betweenStrings "(" ")" (sepBy expr (str_ws ",")) |>> IdentTrail.Invocation
+    pipe2
+        (exprValue <|> attempt exprNew <|> attempt exprIdentifier)
+        (opt(many1(
+                (attempt indexing)
+                <|>
+                (attempt invoking)
+            )))
+        (fun a b ->
+            match b with
+            | None -> a
+            | Some bs ->
+                (a,bs) ||> List.fold (fun acc e -> match e with
+                                                   | Index i -> Expr.Identfier(Identifier.Array(acc, i))
+                                                   | Invocation args -> Expr.MethodCall(acc, args)
+                                                   )
+            )
+                    
+
 let term = pvalue .>> ws <|> between (str_ws "(") (str_ws")") expr
 
 do
@@ -160,7 +173,7 @@ run expr "new int[-1]"
 run expr "a.b[2].c(1,2,3)"
 run expr "a(1)[2].b(3)"
 run expr "new int[q(new A(), new int[2])]"
-run expr "a[c[2]()][3]()"
+run expr "a[b[1](2)][3](4)"
 run expr "a()()"
 run expr "Parser[2](1,2)"
 run expr "a(1)[2]"
