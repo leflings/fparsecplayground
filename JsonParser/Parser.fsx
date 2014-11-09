@@ -138,11 +138,13 @@ let exprMethodCall =
 
 type IdentTrail = Index of Expr | Invocation of Expr list
 
-let pvalue =
+let pvalue = (exprValue <|> attempt exprNew <|> attempt exprIdentifier)
+
+let term =
     let indexing = betweenStrings "[" "]" expr |>> IdentTrail.Index
     let invoking = betweenStrings "(" ")" (sepBy expr (str_ws ",")) |>> IdentTrail.Invocation
     pipe2
-        (exprValue <|> attempt exprNew <|> attempt exprIdentifier)
+        (pvalue .>> ws <|> between (str_ws "(") (str_ws")") expr)
         (opt(many1(
                 (attempt indexing)
                 <|>
@@ -157,9 +159,6 @@ let pvalue =
                                                    | Invocation args -> Expr.MethodCall(acc, args)
                                                    )
             )
-                    
-
-let term = pvalue .>> ws <|> between (str_ws "(") (str_ws")") expr
 
 do
     exprRef := opp.ExpressionParser
@@ -179,6 +178,7 @@ run expr "Parser[2](1,2)"
 run expr "a(1)[2]"
 run expr "a[2](1)"
 run expr "a[2][2]"
+run expr "(new int[2])[1]()"
 
 let stmt, stmtRef = createParserForwardedToRef<Stmt, unit>()
 
