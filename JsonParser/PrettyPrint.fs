@@ -116,11 +116,17 @@ and pidentifier = function
     | Array(e1,e2) -> sprintf "%s[%s]" (pexpr e1) (pexpr e2)
 
 //Stmt
-and pstmt = function
+and pstmt s =
+    let ifText e = sprintf "if(%s)" (pexpr e)
+    match s with
     | Stmt.Block ss ->
         let ss' = List.map pstmt ss |> Section |> Indent
         Section [Line "{"; ss'; Line "}"]
-    | Stmt.Single s -> pstmt s |> Indent
+    | Stmt.Single s ->
+        let x = pstmt s
+        match s with 
+        | Stmt.If(_,_) | Stmt.IfElse(_,_,_) -> x
+        | _ -> x |> Indent
     | Stmt.Assign (e1,e2) -> Line(sprintf "%s = %s" (pexpr e1) (pexpr e2))
     | Stmt.Decl var -> Line(pvariable var + ";")
     | Stmt.Return e ->
@@ -128,12 +134,12 @@ and pstmt = function
         | None -> Line("return;")
         | Some e -> Line("return " + pexpr e + ";")
     | Stmt.If(e, s) ->
-        let line = sprintf "if(%s)" (pexpr e) |> Line
+        let line = ifText e |> Line
         Section [line; pstmt s]
     | Stmt.IfElse(e, s1, s2) ->
-        let line = sprintf "if(%s)" (pexpr e) |> Line
-        let el = Line("else")
-        Section [line; pstmt s1; el; pstmt s2]
+        let ifLine = ifText e |> Line
+        let elseLine = "else" |> Line
+        Section [ifLine; pstmt s1; elseLine; pstmt s2]
     | Stmt.While(e, s) ->
         let line = sprintf "while(%s)" (pexpr e) |> Line
         Section [line; pstmt s]

@@ -245,3 +245,9 @@ let classDecl = PartialParsers.classDecl
 let methodDecl = PartialParsers.methodDecl
 let stmt = PartialParsers.stmt
 let expr = PartialParsers.expr
+
+let parse file = 
+    runParserOnFile program () file (System.Text.Encoding.UTF8)
+    |> function
+    | Success(result,_,_) -> result
+    | Failure(_,_,_) -> []

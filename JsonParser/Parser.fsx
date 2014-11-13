@@ -11,15 +11,10 @@ open Ast
 open Parser
 open PrettyPrint
 
-let prog =
-    runParserOnFile program () "completeTest.java" (System.Text.Encoding.UTF8)
-    |> function
-    | Success(result,_,_) -> result
-    | Failure(_,_,_) -> []
+let completeProgram = Parser.parse "completeTest.java"
+let ifProgram = Parser.parse "ifTest.java"
 
-#load "PrettyPrint.fs"
-open PrettyPrint
-let doc = pprogram prog
+let doc = pprogram ifProgram
 printf "%s" (printDocument doc)
 
 
