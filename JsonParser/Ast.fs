@@ -6,9 +6,6 @@ and Class = {
     SuperClass: string option
     Variables: Variable list
     Methods: MethodDecl list }
-//and Declaration
-//    = Variable of Variable
-//    | Method of MethodDecl
 and Variable = MType * string
 and MethodDecl = {
     MethodName: string
@@ -16,8 +13,7 @@ and MethodDecl = {
     Static: bool
     ProcType: ProcType
     Parameters: Variable list
-    Body: Stmt }
-//and Block = Stmt list
+    Body: Stmt list }
 and Stmt
     = Block of Stmt list
     | Decl of Variable
@@ -28,12 +24,12 @@ and Stmt
     | While of Expr * Stmt
     // Alternatively, make assign a DU with reguler and decl
     //| DeclAssign of Variable * Expr
-    | MethodCall of Expr * Expr list
+    | MethodCall of Expr
 and Expr
     = BinaryOp of Expr * string * Expr
     | UnaryOp of string * Expr
     | MethodCall of Expr * Expr list
-    | Identfier of Identifier
+    | Identifier of Identifier
     | New of New
     | Value of Value
 and New
@@ -41,7 +37,7 @@ and New
     | Array of MType * Expr
 and Identifier
     = Ident of string
-    | Selector of Identifier * Identifier
+    | Selector of Expr * Expr
     | Array of Expr * Expr
 and MType
     = Int

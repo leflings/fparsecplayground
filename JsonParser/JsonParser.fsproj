@@ -55,10 +55,18 @@
   <ItemGroup>
     <Compile Include="Ast.fs" />
     <None Include="Parser.fsx" />
+    <Compile Include="Parser.fs" />
+    <Compile Include="PrettyPrint.fs" />
+    <Compile Include="TypeChecker.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="packages.config" />
     <None Include="JsonParser.fsx" />
+    <None Include="completeTest.java">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="ComputationExpression.fsx" />
+    <None Include="TraceBuilder.fsx" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
