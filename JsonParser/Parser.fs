@@ -157,10 +157,16 @@ module PartialParsers =
 
     let stmt, stmtRef = createParserForwardedToRef<Stmt, unit>()
 
+    type BStmt
+        = Single of Stmt
+        | Many of Stmt list
+
     let stmtBlock =
-        let singleStmt = stmt |>> fun a -> [a]
-        (singleStmt <|> between (str_ws "{") (str_ws "}") (many stmt))
-            |>> Stmt.Block
+        let singleStmt = stmt |>> BStmt.Single
+        let manyStmt = between (str_ws "{") (str_ws "}") (many stmt) |>> BStmt.Many
+        singleStmt <|> manyStmt |>> function
+                                    | Single s -> Stmt.Single s
+                                    | Many ss -> Stmt.Block ss
 
     let stmtVardecl = mvariable .>> str_ws ";" |>> Stmt.Decl
     let stmtAssign = (expr .>> ws .>> str_ws "=") .>>. expr .>> str_ws ";" |>> Stmt.Assign

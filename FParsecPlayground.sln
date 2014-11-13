@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "JsonParser", "JsonParser\JsonParser.fsproj", "{C18EE8AB-9E99-4332-9C73-03E9A4015BDA}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiniJava", "MiniJava\MiniJava.fsproj", "{EFF79484-B904-4327-B6B6-A59C9F0552B3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{C18EE8AB-9E99-4332-9C73-03E9A4015BDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C18EE8AB-9E99-4332-9C73-03E9A4015BDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C18EE8AB-9E99-4332-9C73-03E9A4015BDA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EFF79484-B904-4327-B6B6-A59C9F0552B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EFF79484-B904-4327-B6B6-A59C9F0552B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EFF79484-B904-4327-B6B6-A59C9F0552B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EFF79484-B904-4327-B6B6-A59C9F0552B3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -20,7 +20,7 @@ let prog =
 #load "PrettyPrint.fs"
 open PrettyPrint
 let doc = pprogram prog
-printDocument doc
+printf "%s" (printDocument doc)
 
 
 
@@ -58,6 +58,7 @@ run Parser.expr "(new int[2])[1]()"
 run Parser.expr "b().c().d()"
 run Parser.stmt "int a;"
 run Parser.stmt "a = 3;"
+run (many Parser.stmt) "if(3 == 3) a = 3; a = 2;"
 run (many Parser.stmt) "int a; if(a < 3) { a = 3; } else if ( a == 4) { a = 5; } else { a = 6; }"
 run Parser.stmt "a = b();"
 run Parser.stmt "a(); "

@@ -16,6 +16,7 @@ and MethodDecl = {
     Body: Stmt list }
 and Stmt
     = Block of Stmt list
+    | Single of Stmt
     | Decl of Variable
     | Assign of Expr * Expr
     | Return of Expr option

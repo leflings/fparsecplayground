@@ -12,6 +12,17 @@ type PrettyPrinter() =
     member x.Undent() = if indent > 0 then indent <- indent - 1
     override x.ToString() = sb.ToString()
 
+module List =
+    let intersperse sep list =
+        match list with
+        | [] -> []
+        | [x] -> [x]
+        | xs ->
+            xs |> List.fold (fun acc e -> sep :: e :: acc) []
+            |> function
+            | _ :: xs' -> List.rev xs'
+            | _ -> failwith "Cannot be empty at this point"
+
 let pp = PrettyPrinter()
 
 //type Token = Token of string
@@ -44,9 +55,7 @@ and printSection i = function
 
 
 let rec pprogram (program : Program) =
-    program
-    |> List.map pclass
-    |> Document
+    program |> List.map pclass |> Document
 and pclass (cl : Class) =
     let openLine =
         [
@@ -64,9 +73,10 @@ and pclass (cl : Class) =
     let methods =
         cl.Methods
         |> List.map pmethod
+        |> List.intersperse EmptyLine
         |> Section
         |> Indent
-    Section [openLine; vars; methods; closeLine]
+    Section [openLine; vars; EmptyLine; methods; closeLine]
 
 // Method Declaration
 and pmethod (decl : MethodDecl) =
@@ -81,7 +91,7 @@ and pmethod (decl : MethodDecl) =
         } |> String.concat " " |> Line
     let body = List.map pstmt decl.Body |> Section |> Indent
     let closeLine = Line "}"
-    Section [decLine; body; closeLine;  EmptyLine]
+    Section [decLine; body; closeLine]
 
 and pexpr = function
     | BinaryOp(e1, op, e2) -> String.concat " " [pexpr e1; op; pexpr e2]
@@ -97,7 +107,7 @@ and pnew = function
 
 and pvalue = function
     | Int i -> string i
-    | Boolean b -> string b
+    | Boolean b -> if b then "true" else "false"
     | String s -> s
 
 and pidentifier = function
@@ -106,20 +116,11 @@ and pidentifier = function
     | Array(e1,e2) -> sprintf "%s[%s]" (pexpr e1) (pexpr e2)
 
 //Stmt
-and pstmt (s : Stmt) =
-    let wrap s = pstmt s
-//        match pstmt s with
-//        | Block _ as b -> b
-//        | n -> n
-
-    match s with
+and pstmt = function
     | Stmt.Block ss ->
-        let ss' = match ss with 
-                  | [] -> EmptyLine
-                  | s :: [] -> pstmt s
-                  | _ -> List.map pstmt ss |> Section |> Indent
-
+        let ss' = List.map pstmt ss |> Section |> Indent
         Section [Line "{"; ss'; Line "}"]
+    | Stmt.Single s -> pstmt s |> Indent
     | Stmt.Assign (e1,e2) -> Line(sprintf "%s = %s" (pexpr e1) (pexpr e2))
     | Stmt.Decl var -> Line(pvariable var + ";")
     | Stmt.Return e ->
@@ -128,15 +129,14 @@ and pstmt (s : Stmt) =
         | Some e -> Line("return " + pexpr e + ";")
     | Stmt.If(e, s) ->
         let line = sprintf "if(%s)" (pexpr e) |> Line
-        Section [line; wrap s]
-
+        Section [line; pstmt s]
     | Stmt.IfElse(e, s1, s2) ->
         let line = sprintf "if(%s)" (pexpr e) |> Line
         let el = Line("else")
-        Section [line; wrap s1; el; wrap s2]
+        Section [line; pstmt s1; el; pstmt s2]
     | Stmt.While(e, s) ->
         let line = sprintf "while(%s)" (pexpr e) |> Line
-        Section [line; wrap s]
+        Section [line; pstmt s]
     | Stmt.MethodCall(e) -> Line(pexpr e + ";")
     
 // Proc type
@@ -144,20 +144,12 @@ and pproctype = function
     | Void -> "void"
     | ProcType t -> pmtype t
 // Variable
-and pvariable ((t,n) : Variable) =
-    sprintf "%s %s" (pmtype t) n
+and pvariable ((t,n) : Variable) = sprintf "%s %s" (pmtype t) n
 // MType
-and pmtype (mt : MType) =
-    match mt with
+and pmtype = function
     | MType.Int -> "int"
     | MType.Boolean -> "boolean"
     | MType.String -> "String"
     | MType.Class(s) -> s
     | MType.ArrayType(at) -> sprintf "%s[]" (pmtype at)
-
-
-    
-//    pp {
-//        yield (sprintf "class %s" (cl.ClassName))
-//    }
     
