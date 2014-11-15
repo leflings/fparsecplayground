@@ -6,5 +6,5 @@
 * Add functions type support
 * Add inline declaration and initialization
 * Better parse errors for method bodies. Backtracks out of body
-* Add support for this
+= Add support for this
 * Add support for static access

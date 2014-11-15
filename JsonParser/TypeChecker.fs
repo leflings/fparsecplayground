@@ -16,6 +16,7 @@ let buildEnv (program:Program) : ProgramEnv =
         let vars =
             (Map.empty, c.Variables)
             ||> List.fold (fun map ((t,n) as v) ->
+                            if n = "this" then failwith "'this' is not a legal variable name"
                             match Map.tryFind n map with
                             | Some _ -> failwithf "Field %s already declared in %s" n c.ClassName
                             | None -> Map.add n t map)
@@ -115,18 +116,31 @@ and tcValue = function
     | Value.Int i -> MType.Int
     | Value.Boolean b -> MType.Boolean
     | Value.String s -> MType.String
-and tcIdentField (pe : ProgramEnv) cn (env : Env) (types : MType list option) = function
+and tcIdentField (pe : ProgramEnv) (cn:string) (env : Env) (types : MType list option) i =
+    match i with
     | Ident s ->
-        let ce = Map.find cn pe
+        let thisLookup, className = // HACK this how we represent this.X atm
+            match cn.IndexOf(".") with
+            | -1 -> false, cn
+            | n -> true, cn.Substring(n+1)
+        let ce = Map.find className pe
+        if s = "this" then MType.Class className else
         match types with
-        | None ->   match Map.tryFind s env with
-                    | Some t -> t
-                    | None ->   match Map.tryFind s ce.Fields with
-                                | Some t -> t
-                                | None -> failwithf "Identfier %s not declared" s
+        | None ->
+            let fstLookup, sndLookup =
+                match thisLookup with
+                | true -> ce.Fields, Map.empty
+                | false -> env, ce.Fields
+            match Map.tryFind s fstLookup with
+            | Some t -> t
+            | None ->   match Map.tryFind s sndLookup with
+                        | Some t -> t
+                        | None -> failwithf "Identfier [%s] not declared" s
         | Some ts ->    match Map.tryFind (s,ts) ce.Methods with
-                        | None -> failwithf "No method [%s(%A)] found on class %s" s ts cn
+                        | None -> failwithf "No method [%s(%A)] found on class %s" s ts className
                         | Some mdecl -> mdecl.ProcType
+    | Selector(Identifier(Ident "this"), e2) -> tcExpr pe ("this."+cn) env e2
+    | Selector(_,Identifier(Ident "this")) -> failwith "'this' keyword prohibited on rhs of .dot"
     | Selector(e1,e2) ->
         match tcExpr pe cn env e1 with
         | MType.Class s ->  tcExpr pe s env e2

@@ -92,13 +92,14 @@ module PartialParsers =
         ]
         
     let prefixOps = ["-";"!"]
-
-//    for op in infixOps do
-//        opp.AddOperator(InfixOperator(op,ws,1,Associativity.Left, fun x y -> Expr.BinaryOp(x, op, y)))
     for (prec, ops) in infixOperators do
         ops |> List.iter (fun op -> opp.AddOperator(InfixOperator(op, ws, prec, Associativity.Left, fun x y -> Expr.BinaryOp(x, op, y))))
-    do
-        opp.AddOperator(InfixOperator(".", ws, 5, Associativity.Left, fun x y -> Selector(x,y) |> Expr.Identifier))
+    // Add '.' operator for dotting-ability
+    do opp.AddOperator(
+        InfixOperator(
+            ".", ws, 5, Associativity.Left,
+            fun x y -> Selector(x,y) |> Expr.Identifier
+        ))
     for op in prefixOps do
         opp.AddOperator(PrefixOperator(op, ws, 1, true, fun x -> Expr.UnaryOp(op, x)))
 
