@@ -157,5 +157,6 @@ and pmtype = function
     | MType.Boolean -> "boolean"
     | MType.String -> "String"
     | MType.Class(s) -> s
+    | MType.Void -> "void"
     | MType.ArrayType(at) -> sprintf "%s[]" (pmtype at)
     

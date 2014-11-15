@@ -24,6 +24,7 @@ and cMType t : Tree<string> =
     | MType.String -> Node("String",[])
     | MType.Class(c) -> Node("Class: " + c, [])
     | MType.ArrayType(t) -> Node("Array: ", [cMType t])
+    | MType.Void -> Node("Void", [])
 and cMethod m : Tree<string> =
     Node("Method", seq {
         if m.Public then yield Node("public", [])

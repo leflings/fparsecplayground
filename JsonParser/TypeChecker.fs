@@ -2,10 +2,6 @@
 
 open Ast
 
-let tryFindMethod (klass : Class) name (types : MType list) =
-    klass.Methods
-    |> List.tryFind (fun m -> name = m.MethodName && types = (m.Parameters |> List.map fst))
-
 type ClassEnv = { Fields: Map<string, MType>; Methods: Map<string * MType list, MethodDecl> }
 and ProgramEnv = Map<string, ClassEnv>
 and Env = Map<string, MType>
@@ -41,32 +37,26 @@ let buildEnv (program:Program) : ProgramEnv =
     classes
 
 module TypeHelper =
-    let (|IsInt|IsBool|IsString|IsClass|IsArray|) t =
+    let (|IsInt|IsBool|IsString|IsClass|IsArray|IsVoid|) t =
         match t with
         | MType.Int -> IsInt
         | MType.Boolean -> IsBool
         | MType.String -> IsString
         | MType.Class(_) -> IsClass
         | MType.ArrayType(_) -> IsArray
+        | MType.Void -> IsVoid
     let isSameType t1 t2 =
         match t1,t2 with
         | IsInt, IsInt
         | IsBool, IsBool
         | IsString, IsString
         | IsClass, IsClass
+        | IsVoid, IsVoid
         | IsArray, IsArray -> true
         | _,_ -> false
-//    let isInt = function
-//                | MType.Int -> true
-//                | _ -> false
-//    let isBool = function
-//                 | MType.Boolean -> true
-//                 | _ -> false
 
 open TypeHelper
 
-type IdentReturn = Field of MType | Method of MType * string
-        
 let rec tcProgram (program : Program) =
     let env = buildEnv program
     program |> List.map (fun c -> tcClass env c)
@@ -75,14 +65,11 @@ and tcClass (pe : ProgramEnv) (c : Class) =
     |> List.map (fun m -> tcMethod pe c.ClassName m)
 and tcMethod (pe : ProgramEnv) cn (m : MethodDecl) =
     let msig = m.MethodName, m.Parameters |> List.map fst
-//    let fields = Map.find cn pe |> fun e -> e.Fields
     let args = m.Parameters |> List.map (fun (t, n) -> (n, t)) |> Map.ofList
-//    let env = args |> Map.fold (fun acc k v -> Map.add k v acc) fields
-//    let methodEnv : Env = Map.empty
     m.Body |> List.fold (fun acc e -> tcStmt pe cn msig acc e) args
 and tcStmt (pe : ProgramEnv) cn msig (env : Env) (s : Stmt) =
     let self = tcStmt pe cn msig
-    let exp = tcExpr pe cn msig env
+    let exp = tcExpr pe cn env
     match s with
     | Stmt.Decl(t, n) ->
         match Map.tryFind n env with
@@ -128,25 +115,31 @@ and tcValue = function
     | Value.Int i -> MType.Int
     | Value.Boolean b -> MType.Boolean
     | Value.String s -> MType.String
-and tcIdentField (pe : ProgramEnv) cn msig (env : Env) = function
+and tcIdentField (pe : ProgramEnv) cn (env : Env) (types : MType list option) = function
     | Ident s ->
         let ce = Map.find cn pe
-        match Map.tryFind s env with
-        | Some t -> t
-        | None ->   match Map.tryFind s ce.Fields with
+        match types with
+        | None ->   match Map.tryFind s env with
                     | Some t -> t
-                    | None -> failwithf "Identfier %s not declared" s
+                    | None ->   match Map.tryFind s ce.Fields with
+                                | Some t -> t
+                                | None -> failwithf "Identfier %s not declared" s
+        | Some ts ->    match Map.tryFind (s,ts) ce.Methods with
+                        | None -> failwithf "No method [%s(%A)] found on class %s" s ts cn
+                        | Some mdecl -> match mdecl.ProcType with
+                                        | Void -> MType.Void //failwith "void method used as expression" 
+                                        | ProcType(returnType) -> returnType
     | Selector(e1,e2) ->
-        match tcExpr pe cn msig env e1 with
-        | MType.Class s ->  tcExpr pe s msig env e2
+        match tcExpr pe cn env e1 with
+        | MType.Class s ->  tcExpr pe s env e2
         | _ -> failwithf "LHS of selector always expected to be of class type (%A)" e1
     | Identifier.Array(arrayExp, indexExp) ->
-        match tcExpr pe cn msig env indexExp with
-        | IsInt ->  match tcExpr pe cn msig env arrayExp with
+        match tcExpr pe cn env indexExp with
+        | IsInt ->  match tcExpr pe cn env arrayExp with
                     | MType.ArrayType(mtype) -> mtype
                     | _ -> failwith "Index into a non array type"
         | _ -> failwith "Index argument into array type must be an int type"
-and tcNew (pe : ProgramEnv) cn msig env = function
+and tcNew (pe : ProgramEnv) cn env = function
     | New.Object t ->
         match t with
         | MType.Class s ->
@@ -155,16 +148,16 @@ and tcNew (pe : ProgramEnv) cn msig env = function
             | Some _ -> MType.Class s
         | _ -> failwithf "Trying to instantiate something that isnt a class: %A" t
     | New.Array(t,e) ->
-        match tcExpr pe cn msig env e with
+        match tcExpr pe cn env e with
         | IsInt -> MType.ArrayType(t)
         | et -> failwithf "new %A[] with %A argument" t et
-and tcExpr (pe : ProgramEnv) cn msig (env : Env) (expr : Expr) : MType =
-    let spark f = f pe cn msig env
+and tcExpr (pe : ProgramEnv) cn (env : Env) (expr : Expr) : MType =
+    let spark f = f pe cn env
     let self = spark tcExpr
     match expr with
     | Expr.Value v -> tcValue v
     | Expr.New n -> spark tcNew n
-    | Expr.Identifier i -> spark tcIdentField i
+    | Expr.Identifier i -> tcIdentField pe cn env None i
     | Expr.UnaryOp(op, e) ->
         let t = self e
         match op,t with
@@ -174,24 +167,20 @@ and tcExpr (pe : ProgramEnv) cn msig (env : Env) (expr : Expr) : MType =
     | Expr.BinaryOp(e1, op, e2) ->
         let t1, t2 = (self e1, self e2)
         let fail() = failwithf "BinaryOp '%s' ineligible for use with types %A and %A" op t1 t2
+        let opIn ops = List.exists ((=) op) ops
+        let intIntIntOps = ["*";"+";"-"]
+        let intIntBoolOps = ["<";">";"<=";">="]
+        let boolBoolBoolOps = ["==";"!=";"&&";"||"] 
         match isSameType t1 t2 with
         | false -> fail()
         | true -> match t1 with
-                     | IsInt -> match List.exists ((=) op) ["*";"+";"-";"<";">";"<=";">="] with
-                                | true -> MType.Int
-                                | false -> fail()
-                     | IsBool -> match List.exists ((=) op) ["==";"!=";"&&";"||"] with
-                                 | true -> MType.Boolean
-                                 | false -> fail()
+                     | IsInt -> if opIn intIntIntOps then MType.Int
+                                elif opIn intIntBoolOps then MType.Boolean
+                                else fail()
+                     | IsBool -> if opIn boolBoolBoolOps then MType.Boolean else fail()
                      | _ -> fail()
     | Expr.MethodCall(e, es) ->
         let types = es |> List.map self
-        tcIdentMethod pe cn types e
-        
-        
-    | _ -> failwith "Expr not implemented"
-
-    
-//and rec tcStmt (pe : ProgramEnv) c (stmt : Stmt) =
-//    match stmt with
-//    | Stmt.Assign
+        match e with
+        | Expr.Identifier i -> tcIdentField pe cn env (Some types) i
+        | _ -> failwith "method invoked on something that is not an identifier"

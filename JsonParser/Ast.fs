@@ -46,6 +46,7 @@ and MType
     | String
     | Class of string
     | ArrayType of MType
+    | Void
 and ProcType
     = Void
     | ProcType of MType

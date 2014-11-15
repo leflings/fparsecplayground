@@ -10,6 +10,7 @@ System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 #load "TreeUtils.fs"
 #load "TreeDraw.fs"
 #load "TreeConverter.fs"
+#load "TypeChecker.fs"
 
 open FParsec
 open Ast
@@ -20,6 +21,7 @@ open TreeDesign
 open TreeUtils
 open TreeDraw
 open TreeConverter
+open TypeChecker
 
 let writeStrToFile name str =
     System.IO.File.WriteAllText(name + ".ps", str)
@@ -29,6 +31,7 @@ let st str = run Parser.PartialParsers.stmt str |> Parser.Helpers.getResult
 
 let completeProgram = Parser.parse "completeTest.java"
 let ifProgram = Parser.parse "ifTest.java"
+Parser.parse "ifTest.java" |> TypeChecker.tcProgram
 
 let drawProgram file rewrite = 
     let p = Parser.parse file
@@ -53,6 +56,9 @@ let drawExpr expr =
 drawProgram "ifTest.java" false
 
 drawExpr (ex "A().b[2]()()(2).a[1](1,2)")
+
+drawExpr (ex "A.b.c()")
+drawExpr (ex "A.b.c[2]")
 
 
 let doc = pprogram ifProgram
