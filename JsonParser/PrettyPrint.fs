@@ -84,7 +84,7 @@ and pmethod (decl : MethodDecl) =
         seq {
             if decl.Public then yield "public"
             if decl.Static then yield "static"
-            yield pproctype decl.ProcType
+            yield pmtype decl.ProcType
             yield (sprintf "%s(%s) {"
                     decl.MethodName
                     (String.concat ", " (List.map pvariable decl.Parameters)))
@@ -144,11 +144,6 @@ and pstmt s =
         let line = sprintf "while(%s)" (pexpr e) |> Line
         Section [line; pstmt s]
     | Stmt.MethodCall(e) -> Line(pexpr e + ";")
-    
-// Proc type
-and pproctype = function
-    | Void -> "void"
-    | ProcType t -> pmtype t
 // Variable
 and pvariable ((t,n) : Variable) = sprintf "%s %s" (pmtype t) n
 // MType

@@ -86,13 +86,13 @@ and tcStmt (pe : ProgramEnv) cn msig (env : Env) (s : Stmt) =
     | Stmt.Return(x) ->
         let procType = methodReturnType pe cn msig
         match x, procType with
-        | None, ProcType(t) -> failwith "Must return type %A" t
         | None, Void -> env
+        | None, _ -> failwith "Must return type %A" procType
         | Some _, Void -> failwith "Method return type is void, yet something is returned"
-        | Some e, ProcType(p) ->
+        | Some e, _ ->
             let eType = exp e
-            if isSameType eType p then env
-            else failwithf "Return type %A does not match method signature return type %A" eType p
+            if isSameType eType procType then env
+            else failwithf "Return type %A does not match method signature return type %A" eType procType
 
     | Stmt.If(e, s) ->
         match exp e with
@@ -126,9 +126,7 @@ and tcIdentField (pe : ProgramEnv) cn (env : Env) (types : MType list option) = 
                                 | None -> failwithf "Identfier %s not declared" s
         | Some ts ->    match Map.tryFind (s,ts) ce.Methods with
                         | None -> failwithf "No method [%s(%A)] found on class %s" s ts cn
-                        | Some mdecl -> match mdecl.ProcType with
-                                        | Void -> MType.Void //failwith "void method used as expression" 
-                                        | ProcType(returnType) -> returnType
+                        | Some mdecl -> mdecl.ProcType
     | Selector(e1,e2) ->
         match tcExpr pe cn env e1 with
         | MType.Class s ->  tcExpr pe s env e2

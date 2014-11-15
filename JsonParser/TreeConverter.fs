@@ -29,15 +29,11 @@ and cMethod m : Tree<string> =
     Node("Method", seq {
         if m.Public then yield Node("public", [])
         if m.Static then yield Node("static", [])
-        yield cProcType m.ProcType
+        yield cMType m.ProcType
         yield Node(m.MethodName, [])
         yield Node("Parameters", [for v in m.Parameters -> cVar v])
         yield Node("Statements", [for s in m.Body -> cStmt s])
         } |> List.ofSeq)
-and cProcType pt : Tree<string> =
-    match pt with
-    | Void -> Node("void", [])
-    | ProcType(t) -> cMType t
 and cStmt s : Tree<string> =
     match s with
     | Stmt.Decl v -> cVar v

@@ -154,31 +154,3 @@ run (many1 Parser.stmt) "a.b.c.d();a();"
 run Parser.stmt "b[3] = 3;"
 run Parser.stmt "b()[2] = 2;"
 
-"""public int[] anders(int a, T q, b[] a) {
-Field.method();
-}"""
-|> run Parser.methodDecl
-
-"""class Hej extends Arne { Q a; int[] a; int a(int q) { System[2].out[2]()[2].println("Flemming"); } }
-"""
-|> run Parser.classDecl
-"""class hej extends nej {
-     int a;
-     boolean test(int a) { return (a < 3); }
-     int[] as;
- }"""
-|> run classDecl
-
-let testProgram = """class testmain {
-  int main(String[] args) {
-    System.out.println("Hello World");
-  }
-}
-class hej extends nej {
-     int a;
-     bool test(int a) { return a < 3; }
-     int[] as;
- }
-"""
-run program testProgram
-

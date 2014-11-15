@@ -72,7 +72,7 @@ module PartialParsers =
                     (many(pstring "[]"))
                     (List.fold (fun x _ -> MType.ArrayType x))
 
-    let procType = ((stringReturn "void" Void) <|> (mType |>> ProcType)) .>> str_ws " "
+    let procType = ((stringReturn "void" MType.Void) <|> mType) .>> str_ws " "
 
     let mvariable : Parser<Variable, unit> = (mType .>> ws1) .>>. ident
 

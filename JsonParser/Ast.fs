@@ -11,7 +11,7 @@ and MethodDecl = {
     MethodName: string
     Public: bool
     Static: bool
-    ProcType: ProcType
+    ProcType: MType
     Parameters: Variable list
     Body: Stmt list }
 and Stmt
@@ -47,9 +47,6 @@ and MType
     | Class of string
     | ArrayType of MType
     | Void
-and ProcType
-    = Void
-    | ProcType of MType
 and Value
     = Int of int
     | Boolean of bool
