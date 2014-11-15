@@ -98,7 +98,7 @@ module PartialParsers =
     for (prec, ops) in infixOperators do
         ops |> List.iter (fun op -> opp.AddOperator(InfixOperator(op, ws, prec, Associativity.Left, fun x y -> Expr.BinaryOp(x, op, y))))
     do
-        opp.AddOperator(InfixOperator(".", ws, 1, Associativity.Left, fun x y -> Selector(x,y) |> Expr.Identifier))
+        opp.AddOperator(InfixOperator(".", ws, 5, Associativity.Left, fun x y -> Selector(x,y) |> Expr.Identifier))
     for op in prefixOps do
         opp.AddOperator(PrefixOperator(op, ws, 1, true, fun x -> Expr.UnaryOp(op, x)))
 
@@ -177,6 +177,7 @@ module PartialParsers =
         |>> Stmt.IfElse
     let stmtWhile = (str_ws "while" >>. exprInParen) .>>. stmtBlock |>> Stmt.While
     let stmtMethodCall =
+//        expr .>> str_ws ";" |>> Stmt.MethodCall
         expr .>> str_ws ";" >>= fun e -> 
                                 match e with
                                 | MethodCall(_,_) -> preturn (Stmt.MethodCall(e))
@@ -246,8 +247,15 @@ let methodDecl = PartialParsers.methodDecl
 let stmt = PartialParsers.stmt
 let expr = PartialParsers.expr
 
+module Helpers =
+    let getResult = function
+        | Success(result,_,_) -> result
+        | Failure(s,_,_) -> failwithf "Error: %s" s
+    
+let parseStr str =
+    runParserOnString program () "" str
+    |> Helpers.getResult
+
 let parse file = 
     runParserOnFile program () file (System.Text.Encoding.UTF8)
-    |> function
-    | Success(result,_,_) -> result
-    | Failure(_,_,_) -> []
+    |> Helpers.getResult

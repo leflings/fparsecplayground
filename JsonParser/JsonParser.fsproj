@@ -57,6 +57,11 @@
     <None Include="Parser.fsx" />
     <Compile Include="Parser.fs" />
     <Compile Include="PrettyPrint.fs" />
+    <Compile Include="Rewriter.fs" />
+    <Compile Include="TreeDesign.fs" />
+    <Compile Include="TreeUtils.fs" />
+    <Compile Include="TreeDraw.fs" />
+    <Compile Include="TreeConverter.fs" />
     <Compile Include="TypeChecker.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
@@ -65,6 +70,7 @@
     <None Include="completeTest.java">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="ifTest.java" />
     <None Include="ComputationExpression.fsx" />
     <None Include="TraceBuilder.fsx" />
   </ItemGroup>
