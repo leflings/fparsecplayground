@@ -11,10 +11,11 @@
 		main(stack.stack);
 		int x;
 		A aclass;
-		x = (new A()).bs[3].getC();
+		x = (new A[3])[2].bs[3].getC();
 	}
 
 	public static int main(int[] a) {
+		return 5 * 3 + 2 * 5;
 	}
 
 	public static void main(int a) {

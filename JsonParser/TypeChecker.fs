@@ -67,7 +67,16 @@ and tcClass (pe : ProgramEnv) (c : Class) =
 and tcMethod (pe : ProgramEnv) cn (m : MethodDecl) =
     let msig = m.MethodName, m.Parameters |> List.map fst
     let args = m.Parameters |> List.map (fun (t, n) -> (n, t)) |> Map.ofList
-    m.Body |> List.fold (fun acc e -> tcStmt pe cn msig acc e) args
+    let env = m.Body |> List.fold (fun acc e -> tcStmt pe cn msig acc e) args
+    let returnsProper =
+        if m.ProcType = MType.Void then true
+        else m.Body |> List.rev |> List.tryPick (function | Stmt.Return(e) -> e | _ -> None)
+             |> function
+             | Some t -> tcExpr pe cn env t = m.ProcType
+             | None -> false
+    if returnsProper
+    then env
+    else failwithf "Method body must return something of type %A" m.ProcType
 and tcStmt (pe : ProgramEnv) cn msig (env : Env) (s : Stmt) =
     let self = tcStmt pe cn msig
     let exp = tcExpr pe cn env

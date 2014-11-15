@@ -5,13 +5,6 @@ System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 #load "Monads.fs"
 #load "Ast.fs"
 #load "Parser.fs"
-//#load "PrettyPrint.fs"
-//#load "Rewriter.fs"
-//#load "TreeDesign.fs"
-//#load "TreeUtils.fs"
-//#load "TreeDraw.fs"
-//#load "TreeConverter.fs"
-//
 #load "PrettyPrint.fs"
 #load "Rewriter.fs"
 #load "TreeDesign.fs"
@@ -19,7 +12,6 @@ System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 #load "TreeDraw.fs"
 #load "TreeConverter.fs"
 
-//#load "References.fsx"
 #load "TypeChecker.fs"
 #load "ParserUtils.fs"
 

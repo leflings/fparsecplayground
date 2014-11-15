@@ -1,4 +1,4 @@
-﻿* Check that non-void methods return a proper value
+﻿= Check that non-void methods return a proper value
 * Add access modifiers (private, public, protected). To fields and methods.
 * Add simple type inference to 'var' declarations
 * Add proper inheritance
