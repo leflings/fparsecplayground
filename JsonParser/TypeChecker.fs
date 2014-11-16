@@ -3,6 +3,7 @@
 open Ast
 
 type ClassEnv = { Fields: Map<string, MType>; Methods: Map<string * MType list, MethodDecl> }
+    with static member Empty = { Fields = Map.empty; Methods = Map.empty }
 and ProgramEnv = Map<string, ClassEnv>
 and Env = Map<string, MType>
 
@@ -11,15 +12,33 @@ let methodReturnType (pe : ProgramEnv) cn msig =
     let mdecl = Map.find msig ce.Methods
     mdecl.ProcType
 
+module Map =
+    /// <summary>
+    /// Merges two maps, with the right map having precedence when duplicate entries are found
+    /// </summary>
+    let mergeRight map1 map2 = (map1, map2) ||> Map.fold (fun acc k v -> Map.add k v acc)
+    /// <summary>
+    /// Merges two maps, with the first map having precedence when duplicate entries are found
+    /// </summary>
+    let mergeLeft map1 map2 = (map2, map1) ||> Map.fold (fun acc k v -> Map.add k v acc)
+
 let buildEnv (program:Program) : ProgramEnv =
-    let tcClass (c:Class) =
-        let vars =
+    let rec tcClass (c:Class) : ClassEnv =
+        let parentClass =
+            match c.SuperClass with
+            | Some extends ->
+                match List.tryFind (fun c -> c.ClassName = extends) program with
+                | Some c -> tcClass c
+                | None -> failwithf "Parent class [%s] of [%s] not found" extends c.ClassName
+            | None -> ClassEnv.Empty
+        let fields =
             (Map.empty, c.Variables)
             ||> List.fold (fun map ((t,n) as v) ->
                             if n = "this" then failwith "'this' is not a legal variable name"
                             match Map.tryFind n map with
                             | Some _ -> failwithf "Field %s already declared in %s" n c.ClassName
                             | None -> Map.add n t map)
+            |> Map.mergeRight parentClass.Fields
         let methods =
             let namesAndTypes = c.Methods |> List.map (fun m -> m.MethodName, m.Parameters |> List.map fst)
             (Map.empty, c.Methods, namesAndTypes)
@@ -28,7 +47,8 @@ let buildEnv (program:Program) : ProgramEnv =
                              | Some _ ->
                                 failwithf "Method %s(%s) already declared" (fst nt) (snd nt |> List.map (sprintf "%A") |> String.concat ", ")
                              | None -> Map.add nt { m with Body = [] } map)
-        { Fields = vars; Methods = methods }   
+            |> Map.mergeRight parentClass.Methods
+        { Fields = fields; Methods = methods }   
     let classes =
         (Map.empty, program)
         ||> List.fold (fun acc c ->

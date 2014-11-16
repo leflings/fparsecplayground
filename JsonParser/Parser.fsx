@@ -19,6 +19,9 @@ System.Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
 ParserUtils.TypeCheck.checkFile "ifTest.java"
 ParserUtils.TypeCheck.checkFile "thisTest.java"
+Parser.parse "inheritanceTest.java"
+ParserUtils.TypeCheck.checkFile "inheritanceTest.java"
+
 
 ParserUtils.Draw.drawProgram "ifTest.java" false
 ParserUtils.Draw.drawExpr "A().b[2]()()(2).a[1](1,2)"
