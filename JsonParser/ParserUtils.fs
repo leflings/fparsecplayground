@@ -6,12 +6,13 @@ open Parser
 open TreeConverter
 open TreeDesign
 open PrettyPrint
+open Rewriter
 
 let ex str = run Parser.PartialParsers.expr str |> Parser.Helpers.getResult
 let st str = run Parser.PartialParsers.stmt str |> Parser.Helpers.getResult
 
 module TypeCheck =
-    let check p = TypeChecker.tcProgram p
+    let check p = TypeChecker.tcProgram (rewriteProgram p)
     let checkFile file = Parser.parse file |> check
 
 module Print =

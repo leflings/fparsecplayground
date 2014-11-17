@@ -221,7 +221,7 @@ module PartialParsers =
         pipe3
             className
             (opt superClass)
-            (between (str_ws "{") (str_ws "}") (many (attempt methodDeclaration <|> field)))
+            (between (str_ws "{") (str_ws "}") (many (attempt field<|> methodDeclaration )))
             (fun className superClass bodyItems -> 
                 let fields =
                     List.fold (fun acc ->
