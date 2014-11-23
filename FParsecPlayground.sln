@@ -5,6 +5,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "JsonParser", "JsonParser\Js
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "MiniJava", "MiniJava\MiniJava.fsproj", "{EFF79484-B904-4327-B6B6-A59C9F0552B3}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Playground", "Playground\Playground.fsproj", "{2A59FD20-BFC7-431C-9CE1-06598B63D7FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{EFF79484-B904-4327-B6B6-A59C9F0552B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EFF79484-B904-4327-B6B6-A59C9F0552B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EFF79484-B904-4327-B6B6-A59C9F0552B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A59FD20-BFC7-431C-9CE1-06598B63D7FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A59FD20-BFC7-431C-9CE1-06598B63D7FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A59FD20-BFC7-431C-9CE1-06598B63D7FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A59FD20-BFC7-431C-9CE1-06598B63D7FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
