@@ -38,6 +38,7 @@ module ArrayBoard =
         Array2D.init size size (fun x y -> List.nth (List.nth b x) y)
 
 module ListBoard = 
+    let printAny b = b |> List.map (String.concat "" >> printfn "%s")
     let print b = b |> List.map (Array.ofList >> fun e -> new System.String(e)) |> List.iter (printfn "%s")
     let fromString (str:string) : Board<char> =
         let rows = str.Split([|'\n'|], System.StringSplitOptions.RemoveEmptyEntries) |> List.ofArray
@@ -50,16 +51,16 @@ module ListBoard =
     let swap b p1 p2 =
         let x1, x2 = getVal b p1, getVal b p2
         b |> setVal p1 x2 |> setVal p2 x1
-    let setAndTrickleUp v b p =
-        let b' = setVal p v b
-        let rec trickleUp b p =
+    let setAndTrickleUp v p b =
+        let rec trickleUp p b =
             match move p N with
             | -1, _ -> b
-            | p' -> trickleUp (swap b p p') p'
-        trickleUp b' p
+            | p' -> trickleUp p' (swap b p p')
+        let b' = setVal p v b
+        trickleUp p b'
+
     let removeChar = setAndTrickleUp (' ')
-    let removeChars b ps =
-        (b,List.sortBy fst ps) ||> List.fold removeChar
+    let removeChars ps b = (ps |> List.sortBy fst |> List.rev, b) ||> List.foldBack removeChar
     let availableFields b =
         b
         |> List.mapi (fun x -> List.mapi (fun y -> function | ' ' -> None | _ -> Some(x,y))) 
@@ -94,73 +95,88 @@ module Logic =
             | _ -> es |> List.collect (f word' words)
         f [] [] tree
 
+type Result =
+    | Row of seq<string * Position list>
+    | Result of seq<Result>
+
+module Aux =
+    let rec insertions x = function
+        | []             -> [[x]]
+        | (y :: ys) as l -> (x::l)::(List.map (fun x -> y::x) (insertions x ys))
+
+    let rec permutations = function
+        | []      -> seq [ [] ]
+        | x :: xs -> Seq.concat (Seq.map (insertions x) (permutations xs))
+
+    let rec flatResult = function
+        | Row s -> s |> Seq.singleton
+        | Result rs -> Seq.collect (flatResult) rs
+
+    let result board lengths =
+        let wordsAndPathsFrom b bA n p =
+            Logic.treeFrom b n p
+            |> Logic.allBranches
+            |> Seq.filter (Seq.length >> (=) n)
+            |> Seq.map (fun x ->
+                x |> (Seq.map (ArrayBoard.get bA) >> Array.ofSeq >> fun e -> new System.String(e) |> toLower), x)
+
+        let walkFrom b n p =
+            let board : Board<bool> = b |> List.map (List.map (function | ' ' -> false | _ -> true)) 
+            let boardArr = ArrayBoard.fromList b
+            wordsAndPathsFrom board boardArr n p
+            |> Seq.filter (fun x -> Words.english.Contains(fst x))
+
+        let walkFromAll b ns =
+            let run n b =
+                ListBoard.availableFields b
+                |> Seq.collect (walkFrom b n)
+                |> Seq.distinct
+
+            let rec recur nstack acc b =
+                match nstack with
+                | [] -> acc |> List.rev |> Seq.ofList |> Row
+                | n :: ns ->
+                    run n b
+                    |> Seq.map (fun (w,ps) ->
+                            let b' = ListBoard.removeChars ps b
+                            let acc' = (w,ps)::acc
+                            recur ns acc' b')
+                    |> Result
+            recur ns [] b
+
+        walkFromAll board lengths |> flatResult
+
+
+let forOne str ns = Aux.result (ListBoard.fromString str) ns
+let forAll str ns =
+    let nns = ns |> Aux.permutations |> Seq.distinct |> Seq.toList
+    seq { for ns in nns do
+            yield! forOne str ns }
+
+let solutions str ns =
+    forAll str ns
+    |> Seq.map (List.ofSeq)
+    |> Seq.distinctBy (List.map fst >> List.sort)
+    |> Seq.sortBy (List.map fst)
+
+let printSolutions sols = sols |> Seq.iter (List.map fst >> printfn "%A")
+
+let printSolutionsAndPaths str sols =
+    let printPath b ps =
+        let b' = b |> List.mapi (fun x -> List.mapi (fun y e -> if List.exists ((=) (x,y)) ps then sprintf " %c " e else "   "))
+        b' |> ListBoard.printAny |> ignore
+        b'
+//    let sols = solutions str ns
+    let board = ListBoard.fromString str
+    sols
+    |> Seq.iter (fun sol ->
+        (board,sol)
+        ||> List.fold (fun b (w,p) ->
+            printfn "%A" w
+            printPath b p|> ignore
+            ListBoard.removeChars p b)
+            |> ignore
+        printfn "-----------------------"
+        )
 
     
-
-let solutions boardStr lengths =
-    let wordsAndPathsFrom b bA n p =
-
-        Logic.treeFrom b n p
-        |> Logic.allBranches
-        |> Seq.filter (Seq.length >> (=) n)
-        |> Seq.map (fun x ->
-            x |> (Seq.map (ArrayBoard.get bA) >> Array.ofSeq >> fun e -> new System.String(e) |> toLower), x)
-
-    let test b n p =
-        let board : Board<bool> = b |> List.map (List.map (function | ' ' -> false | _ -> true)) 
-        let boardArr = ArrayBoard.fromList b
-        wordsAndPathsFrom board boardArr n p
-        |> Seq.filter (fun x -> Words.english.Contains(fst x))
-
-    let testAll b n n2 n3 =
-        let ns = [n;n2;n3]
-        let run b n ps =
-            let newBoard = ListBoard.removeChars b ps
-            ListBoard.availableFields newBoard
-            |> Seq.collect (fun p -> test newBoard n p)
-            |> Seq.distinct
-
-        let kkk() =
-            let x1 = run b n []
-            let x2 = seq { for w,ps in x1 do yield! run b n2 ps }
-            let x3 = seq { for w,ps in x2 do yield! run b n3 ps }
-            (x1,x2,x3)
-
-        let haha() =
-            seq {
-                for n in ns do ()
-                }
-                
-
-        let combos() =
-            seq {
-                for w,ps in run b n [] do
-                    for w2,ps2 in run b n2 ps do
-                        let b2 = ListBoard.removeChars b ps
-                        for w3,_ in run b n3 ps2 do
-                            yield w,w2,w3
-            }
-//        combos
-        combos()
-    let (|SeqEmpty|SeqNotEmpty|) s =
-        match Seq.isEmpty s with
-        | true -> SeqEmpty
-        | false -> SeqNotEmpty
-    let board = ListBoard.fromString boardStr
-    let n1, n2, n3 =
-        match lengths with
-        | [] -> 0,0,0
-        | x :: [] -> x,0,0
-        | x :: y :: [] -> x,y,0
-        | x :: y :: z :: _ -> x,y,z
-    
-//    let n1 = longestWordLength
-//    let n2 =
-//        let s = (ListBoard.size board)
-//        s * s - longestWordLength
-//    testAll board n1 n2 n3
-    testAll board n1 n2 n3
-    |> Seq.append (testAll board n2 n1 n3)
-    |> Seq.append (testAll board n3 n2 n1)
-    |> Seq.append (testAll board n3 n1 n2)
-

@@ -61,6 +61,7 @@
     <Compile Include="TreeDraw.fs" />
     <Compile Include="Program.fs" />
     <None Include="packages.config" />
+    <Compile Include="Solver.fs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
