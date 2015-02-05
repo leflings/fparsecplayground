@@ -2,23 +2,37 @@
 #r "bin\Debug\TNX.NamesAndPassword.dll"
 #r "bin\Debug\Zlib.Portable.dll"
 #load "Solver.fs"
-
 open Solver
 
 #time "on";;
 
 let boardStr = """
-heoc
-sonb
-urma
-btrp
+etrkk
+ksiei
+utbsk
+rreuu
+vkadm
 """
-let words = [8;5;3]
+
+Words.english.Count
+Words.danish.Count
+
+ListBoard.fromString boardStr
+|> ListBoard.print
+
+let words = [5;4;5;6;5]
 words |> forOne boardStr |> Seq.iter (printfn "%A")
 words |> forAll boardStr
 
-let sol = words |> solutions boardStr |> Seq.map id
+let sol = words |> solutions true boardStr |> Seq.map id
+
+words |> solutions true boardStr |> printSolutions
+words |> solutions false boardStr |> printSolutions
+
 sol |> printSolutions
+
+
+
 sol
 |> Seq.filter (List.exists (fst >> (=) "wing"))
 |> Seq.filter (List.exists (fst >> (=) "path"))

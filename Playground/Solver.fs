@@ -19,6 +19,8 @@ let rec dir = function
     | SE -> (dir S, dir E) ||> sum2
 let move p m = sum2 p (dir m)
 
+let strFromChars (cs:char[]) = new string(cs)
+
 type Tree<'a> = | Node of 'a * Tree<'a> list
 let rec mapTree f tree =
     match tree with
@@ -30,6 +32,9 @@ module Words =
     let english =
         let enWords = TNX.NamesAndPassword.WorldDictionary.GetWordsForCulture("en") |> Seq.map toLower
         enWords |> Set.ofSeq
+    let danish = TNX.NamesAndPassword.WorldDictionary.GetWordsForCulture("dk") |> Seq.map toLower |> Set.ofSeq
+//    let danish =
+//        ["musik";"raket";"kurv";"stribe";"dukke"] |> Set.ofList
 
 module ArrayBoard =
     let get (arr : 'a[,]) (x,y) = arr.[x,y]
@@ -37,9 +42,19 @@ module ArrayBoard =
         let size = List.length b
         Array2D.init size size (fun x y -> List.nth (List.nth b x) y)
 
+module List =
+    let intersperse sep list =
+        match list with
+        | [] -> []
+        | [x] -> [x]
+        | xs ->
+            xs |> List.fold (fun acc e -> sep :: e :: acc) []
+            |> function
+            | _ :: xs' -> List.rev xs'
+            | _ -> failwith "Cannot be empty at this point"
 module ListBoard = 
     let printAny b = b |> List.map (String.concat "" >> printfn "%s")
-    let print b = b |> List.map (Array.ofList >> fun e -> new System.String(e)) |> List.iter (printfn "%s")
+    let print b = b |> List.map (List.intersperse ' ' >> Array.ofList >> strFromChars) |> List.iter (printfn "%s")
     let fromString (str:string) : Board<char> =
         let rows = str.Split([|'\n'|], System.StringSplitOptions.RemoveEmptyEntries) |> List.ofArray
         rows |> List.map (fun (s : string) -> s.ToCharArray() |> List.ofArray)
@@ -99,6 +114,18 @@ type Result =
     | Row of seq<string * Position list>
     | Result of seq<Result>
 
+type LoggerBuilder() =
+    member this.Bind(x,f) =
+        let sw = new System.Diagnostics.Stopwatch()
+        sw.Restart()
+        printf "Start run..."
+        let r = f x
+        printfn "... done in %A" (sw.Elapsed)
+        r
+    member this.Return(x) = x
+
+let logger = new LoggerBuilder()
+
 module Aux =
     let rec insertions x = function
         | []             -> [[x]]
@@ -118,19 +145,23 @@ module Aux =
             |> Logic.allBranches
             |> Seq.filter (Seq.length >> (=) n)
             |> Seq.map (fun x ->
-                x |> (Seq.map (ArrayBoard.get bA) >> Array.ofSeq >> fun e -> new System.String(e) |> toLower), x)
+                x |> (Seq.map (ArrayBoard.get bA) >> Array.ofSeq >> strFromChars >> toLower), x)
 
         let walkFrom b n p =
             let board : Board<bool> = b |> List.map (List.map (function | ' ' -> false | _ -> true)) 
             let boardArr = ArrayBoard.fromList b
             wordsAndPathsFrom board boardArr n p
-            |> Seq.filter (fun x -> Words.english.Contains(fst x))
+//            |> Seq.filter (fun x -> Words.english.Contains(fst x))
+            |> Seq.filter (fun x -> Words.danish.Contains(fst x))
 
         let walkFromAll b ns =
             let run n b =
-                ListBoard.availableFields b
-                |> Seq.collect (walkFrom b n)
-                |> Seq.distinct
+//                logger {
+//                    let! x = 
+                        ListBoard.availableFields b
+                        |> Seq.collect (walkFrom b n)
+                        |> Seq.distinct
+//                    return x }
 
             let rec recur nstack acc b =
                 match nstack with
@@ -153,8 +184,15 @@ let forAll str ns =
     seq { for ns in nns do
             yield! forOne str ns }
 
-let solutions str ns =
-    forAll str ns
+let forAllAsync str ns =
+    let nns = ns |> Aux.permutations |> Seq.distinct |> Seq.toList
+    Async.Parallel [ for ns in nns -> async { return forOne str ns } ]
+    |> Async.RunSynchronously
+    |> Seq.collect id
+
+let solutions asAsync str ns =
+    let f = if asAsync then forAllAsync else forAll
+    f str ns |> Seq.toArray
     |> Seq.map (List.ofSeq)
     |> Seq.distinctBy (List.map fst >> List.sort)
     |> Seq.sortBy (List.map fst)
@@ -166,13 +204,13 @@ let printSolutionsAndPaths str sols =
         let b' = b |> List.mapi (fun x -> List.mapi (fun y e -> if List.exists ((=) (x,y)) ps then sprintf " %c " e else "   "))
         b' |> ListBoard.printAny |> ignore
         b'
-//    let sols = solutions str ns
     let board = ListBoard.fromString str
     sols
     |> Seq.iter (fun sol ->
         (board,sol)
         ||> List.fold (fun b (w,p) ->
             printfn "%A" w
+            ListBoard.print b
             printPath b p|> ignore
             ListBoard.removeChars p b)
             |> ignore
